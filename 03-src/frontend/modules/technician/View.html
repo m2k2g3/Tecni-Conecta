@@ -1,0 +1,292 @@
+<!--
+  FRONTEND - REGISTRO TÉCNICO
+  [V]alidar: Límite 20MB y formatos permitidos en el navegador.
+  [E]nviar: Formulario mediante FormData al endpoint del servidor (procesar.php).
+  [N]otificar: Ocultar formulario y mostrar mensaje de "Pendiente".
+  [B]loquear: Contenedor visual preparado para denegar acceso (isVerified = false).
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro Técnico - TecniConecta</title>
+    <style>
+        /* Variables de color basadas en las imágenes */
+        :root {
+            --bg-light: #f8fafc;
+            --bg-dark: #0f172a; /* Azul muy oscuro / Negro */
+            --bg-card: #1e293b; /* Azul un poco más claro para el formulario */
+            --primary: #0ea5e9; /* Azul brillante */
+            --primary-gradient: linear-gradient(90deg, #3b82f6, #06b6d4);
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --error: #ef4444;
+            --success: #10b981;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-light);
+            background-image: radial-gradient(circle at top right, #e0f2fe, transparent 40%),
+                              radial-gradient(circle at bottom left, #f3e8ff, transparent 40%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            color: var(--text-main);
+        }
+
+        .card-container {
+            background-color: var(--bg-dark);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            width: 100%;
+            max-width: 550px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 30px;
+            font-size: 24px;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        h2 span {
+            color: #38bdf8; /* Acento azul */
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="file"] {
+            width: 100%;
+            padding: 12px 16px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-sizing: border-box;
+            color: #ffffff;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+        }
+
+        /* Estilo personalizado para el input de archivo */
+        input[type="file"]::file-selector-button {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 15px;
+            font-weight: 600;
+            transition: opacity 0.3s;
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            opacity: 0.9;
+        }
+
+        .error {
+            color: var(--error);
+            font-size: 13px;
+            display: none;
+            margin-top: 8px;
+            background: rgba(239, 68, 68, 0.1);
+            padding: 8px;
+            border-radius: 6px;
+            border-left: 3px solid var(--error);
+        }
+
+        button#btnSubmit {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        button#btnSubmit:hover {
+            transform: translateY(-2px);
+            opacity: 0.95;
+        }
+        
+        button#btnSubmit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Mensajes de estado (Notificación y Bloqueo) */
+        .mensaje-estado {
+            display: none;
+            text-align: center;
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        .mensaje-estado h3 {
+            margin-top: 0;
+        }
+
+        #msg-revision {
+            background-color: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success);
+        }
+        
+        #msg-revision h3 {
+            color: var(--success);
+        }
+
+        #msg-bloqueo {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--error);
+        }
+
+        #msg-bloqueo h3 {
+            color: var(--error);
+        }
+        
+        .mensaje-estado p {
+            color: var(--text-main);
+            font-size: 15px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card-container">
+        <!-- Formulario -->
+        <div id="form-container">
+            <h2>Registro de <span>Técnico</span></h2>
+            <form id="registroForm">
+                <div class="form-group">
+                    <label>Especialidad:</label>
+                    <input type="text" id="especialidad" placeholder="Ej. Electricista, Plomero..." required>
+                </div>
+                <div class="form-group">
+                    <label>Tarifa base de visita:</label>
+                    <input type="number" id="tarifa" step="0.01" placeholder="Ej. 45000" required>
+                </div>
+                <div class="form-group">
+                    <label>Años de experiencia:</label>
+                    <input type="number" id="experiencia" placeholder="Ej. 5" required>
+                </div>
+                <div class="form-group">
+                    <label>Cédula y Certificados (.pdf, .jpg, .png, .webp - Máx 20MB):</label>
+                    <input type="file" id="documento" accept=".pdf, .jpg, .jpeg, .png, .webp" required>
+                    <div class="error" id="errorArchivo">El archivo supera los 20MB o el formato no es válido.</div>
+                </div>
+                <button type="submit" id="btnSubmit">Enviar Registro</button>
+            </form>
+        </div>
+
+        <!-- Mensajes del sistema -->
+        <div id="msg-revision" class="mensaje-estado">
+            <h3>⏳ Cuenta en Revisión</h3>
+            <p><strong>Notificación:</strong> Su documentación ha sido recibida.<br>
+            Estado actual: <strong>Pendiente</strong>.<br>
+            IsVerified: <strong>False</strong>.</p>
+            <p style="font-size: 13px; color: var(--text-muted);">Espere la aprobación de un administrador para acceder a la plataforma.</p>
+        </div>
+
+        <div id="msg-bloqueo" class="mensaje-estado">
+            <h3>⛔ Acceso Denegado</h3>
+            <p>Su cuenta no ha sido aprobada por la administración todavía.</p>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('registroForm');
+        const fileInput = document.getElementById('documento');
+        const errorArchivo = document.getElementById('errorArchivo');
+
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            errorArchivo.style.display = 'none';
+            
+            if (file) {
+                const maxSize = 20 * 1024 * 1024;
+                const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+                
+                if (file.size > maxSize) {
+                    errorArchivo.textContent = "Error: El archivo supera los 20MB.";
+                    errorArchivo.style.display = 'block';
+                    this.value = '';
+                } else if (!allowed.includes(file.type)) {
+                    errorArchivo.textContent = "Error: Formato no permitido.";
+                    errorArchivo.style.display = 'block';
+                    this.value = '';
+                }
+            }
+        });
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('especialidad', document.getElementById('especialidad').value);
+            formData.append('tarifa', document.getElementById('tarifa').value);
+            formData.append('experiencia', document.getElementById('experiencia').value);
+            formData.append('documento', fileInput.files[0]);
+
+            const btn = document.getElementById('btnSubmit');
+            btn.disabled = true;
+            btn.textContent = 'Subiendo...';
+
+            try {
+                const response = await fetch('procesar.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    document.getElementById('form-container').style.display = 'none';
+                    document.getElementById('msg-revision').style.display = 'block';
+                } else {
+                    alert("Error en el servidor al procesar el registro.");
+                }
+            } catch (error) {
+                alert("Error de conexión.");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Enviar Registro';
+            }
+        });
+    </script>
+</body>
+</html>
